@@ -25,6 +25,7 @@
 
 #include <random>
 #include <unordered_map>
+#include <cstring>
 
 #include "lib/common/error.hpp"
 

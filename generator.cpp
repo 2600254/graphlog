@@ -66,8 +66,8 @@ struct InitVertexRecord {
 };
 }
 
-Generator::Generator(const std::string& path_input_graph, const std::string& path_output_log, Writer& writer, double sf_frequency, double ef_vertices, double ef_edges, double aging_factor, uint64_t seed) :
-    m_writer(writer), m_num_operations(0), m_seed(seed), m_random(m_seed){
+Generator::Generator(const std::string& path_input_graph, const std::string& path_output_log, Writer& writer, double sf_frequency, double ef_vertices, double ef_edges, double aging_factor, uint64_t seed, bool is_timestamped) :
+    m_writer(writer), m_num_operations(0), m_seed(seed), m_random(m_seed), m_is_timestamped(is_timestamped){
     unordered_map<uint64_t, InitVertexRecord> map_frequencies;
     unique_ptr<WeightedEdge[]> ptr_weighted_edges;
 
@@ -119,7 +119,7 @@ void Generator::init_read_input_graph(void* ptr_array_edges, void* ptr_frequenci
         ERROR("Too many vertices: " << num_vertices() << ", vertices in the final graph: " << num_final_vertices() << ", expansion factor: " << expansion_factor_vertices);
     }
 
-    m_num_edges_final = stoi(prop_num_edges);
+    m_num_edges_final = stoll(prop_num_edges);
     COUT_DEBUG("num vertices final graph: " << num_final_vertices() << ", num edges final graph: " << m_num_edges_final);
 
     m_vertices = new uint64_t[num_vertices()];
@@ -255,7 +255,8 @@ void Generator::init_permute_edges_final(std::unique_ptr<WeightedEdge[]>& ptr_ed
     for(uint64_t i = 0; i < m_num_edges_final; i++){
         permutation[i] = i;
     }
-    common::permute(permutation, m_num_edges_final, m_seed + 57);
+    if(!m_is_timestamped)
+        common::permute(permutation, m_num_edges_final, m_seed + 57);
 
     WeightedEdge* edges = ptr_edges_final.get();
 
@@ -330,7 +331,8 @@ uint64_t Generator::generate0() {
     int64_t edges_final_block = -1, edges_final_offset = 0, edges_final_block_sz = 0, edges_final_position = 0;
 //    double prob_bump = 1.0; // heuristics to bump up the probability of inserting a final edge
     uint64_t num_ops_performed = 0;
-
+    uint64_t now_cnt=0;
+    uint64_t total_cnt =0;
     while (num_ops_performed < m_num_operations || /* there are still edges to delete */ !temporary_edges.empty()) {
         assert(edges_final_position <= m_num_edges_final);
         uint64_t num_missing_final_edges = m_num_edges_final - edges_final_position;
@@ -402,10 +404,26 @@ uint64_t Generator::generate0() {
                 Edge edge_temporary;
                 do {
                     // generate the source_id
-                    uint32_t src_id = m_frequencies->search(unif_frequencies(m_random));
+                    uint32_t src_id;
                     int64_t old_frequency;
-                    m_frequencies->unset(src_id, &old_frequency);
-
+                    if(!m_is_timestamped)
+                    {
+                        src_id = m_frequencies->search(unif_frequencies(m_random));
+                        m_frequencies->unset(src_id, &old_frequency);
+                    }
+                    else
+                    {
+                        src_id = m_frequencies->search(now_cnt);
+                        m_frequencies->unset(src_id, &old_frequency);
+                        if(now_cnt == total_cnt){
+                            if(total_cnt == m_frequencies->total_count() )
+                            {
+                                now_cnt = total_cnt = 0;
+                            }
+                            total_cnt += old_frequency;
+                        }
+                        now_cnt++;
+                    }
                     // generate the destination_id
                     uniform_int_distribution<uint64_t> unif_tmp{0, (uint64_t) m_frequencies->total_count() - 1};
                     uint32_t dst_id = m_frequencies->search(unif_tmp(m_random));

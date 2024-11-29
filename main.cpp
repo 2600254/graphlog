@@ -40,6 +40,7 @@ double g_ef_vertices = 1.2; // expansion factor for the vertices in the graph
 string g_path_input; // path to the input graph, in the Graphalytics format
 string g_path_output; // path where to store the log of updates
 uint64_t g_seed = std::random_device{}(); // the seed to use for the random generator
+bool g_is_timestamped = false; // generate a sequential insertion graph
 
 // logging
 mutex g_mutex_log;
@@ -63,8 +64,9 @@ int main(int argc, char* argv[]) {
         writer.set_property("hostname", common::hostname());
         writer.set_property("input_graph", g_path_input);
         writer.set_property("seed", g_seed);
+        writer.set_property("timestamped", g_is_timestamped);
 
-        Generator generator {g_path_input, g_path_output, writer, 1.0, g_ef_vertices, g_ef_edges, g_aging, g_seed};
+        Generator generator {g_path_input, g_path_output, writer, 1.0, g_ef_vertices, g_ef_edges, g_aging, g_seed, g_is_timestamped};
         generator.generate();
     } catch (common::Error& e){
         cerr << e << endl;
@@ -90,6 +92,7 @@ static void parse_command_line_arguments(int argc, char* argv[]){
         ("v, efv", "Expansion factor for the vertices in the graph", value<double>()->default_value(to_string(g_ef_vertices)))
         ("h, help", "Show this help menu")
         ("seed", "Seed to initialise the random generator", value<uint64_t>())
+        ("timestamped", "Generate a sequential insertion graph.")
     ;
 
     auto parsed_args = options.parse(argc, argv);
@@ -136,11 +139,16 @@ static void parse_command_line_arguments(int argc, char* argv[]){
         g_seed = parsed_args["seed"].as<uint64_t>();
     }
 
+    if(parsed_args.count("timestamped") > 0){
+        g_is_timestamped =  parsed_args["timestamped"].as<bool>() ;
+    }
+
     cout << "Path input graph: " << g_path_input << "\n";
     cout << "Path output log: " << g_path_output << "\n";
     cout << "Aging factor: " << g_aging << "\n";
     cout << "Expansion factor for the vertices: " << g_ef_vertices << "\n";
     cout << "Expansion factor for the edges: " << g_ef_edges << "\n";
     cout << "Seed for the random generator: " << g_seed << "\n";
+    cout << "If generate a timestamped graph: " << g_is_timestamped << "\n";
     cout << endl;
 }

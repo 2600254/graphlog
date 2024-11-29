@@ -45,6 +45,7 @@ class Generator {
     CountingTree* m_frequencies = nullptr; // the frequency  associated to each vertex in the graph. Initially the frequency is the number of edges attached in the loaded graph.
     std::unordered_map<Edge, bool> m_edges_present; // edges present during the creation of the graph
     std::mt19937_64 m_random;
+    bool m_is_timestamped = false; // generate a sequential insertion graph
 
     void init_read_input_graph(void* ptr_edges_final, void* ptr_frequencies, const std::string& path_input_graph, double ef_vertices);
     void init_temporary_vertices(void* ptr_map_frequencies, void* ptr_array_frequencies, double sf_frequency);
@@ -60,7 +61,7 @@ class Generator {
 
 public:
     // Constructor
-    Generator(const std::string& path_input_graph, const std::string& path_output_log, Writer& writer, double sf_frequencies, double ef_vertices, double ef_edges, double aging_factor, uint64_t seed);
+    Generator(const std::string& path_input_graph, const std::string& path_output_log, Writer& writer, double sf_frequencies, double ef_vertices, double ef_edges, double aging_factor, uint64_t seed, bool is_timestamped);
 
     // Destructor
     ~Generator();

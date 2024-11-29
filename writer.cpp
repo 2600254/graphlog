@@ -402,7 +402,8 @@ void Writer::main_async_write() {
 #endif
 
         m_handle.write((char*) task.m_buffer, task.m_buffer_sz);
-        free(task.m_buffer);
+        if(task.m_buffer_sz!=0)
+            free(task.m_buffer);
         next_task_id++;
     } while(task.m_buffer != nullptr);
 
